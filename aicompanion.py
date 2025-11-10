@@ -1,6 +1,7 @@
 import os
 import yaml
 import logging
+import re
 
 from flask import Flask, request, jsonify, render_template
 
@@ -92,12 +93,13 @@ def ai_req(message):
     doc_text = "Usa questo testo per rispondere alla domanda:\n" + doc_text + "\nSe non conosci la risposta, dì che non lo sai.\n"
     context[1] = ('system', doc_text)
 
-    response = lcmodel.invoke(context)
-    context.append(('ai', response.content))
+    response = lcmodel.invoke(context).content
+    response = response.replace("*", "")
+    response = re.sub(r'\([^)]*\)', '', response)
+    context.append(('ai', response))
 
     # generate audio
-    audio_b64 = text_to_speech(response.content)
-
+    audio_b64 = text_to_speech(response)
     # context garbage collector
     # remove oldest user-assistant pair but keep system prompt and rag info
     if len(context) > config['max_context_length']:
